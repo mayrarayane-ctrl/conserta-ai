@@ -1,0 +1,7 @@
+{
+  "name": "ConsertaAí",
+  "description": "Especialista sênior em manutenção residencial, elétrica, hidráulica e reparos domésticos no Brasil.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

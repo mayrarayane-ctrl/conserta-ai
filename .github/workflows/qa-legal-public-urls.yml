@@ -1,0 +1,45 @@
+name: QA legal public URLs (read-only)
+on:
+  push:
+    branches:
+      - qa/legal-navigation-only-20261022
+    paths:
+      - '.github/workflows/qa-legal-public-urls.yml'
+      - 'docs/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-legal-pages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check published privacy and deletion pages over HTTPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://mayrarayane-ctrl.github.io/conserta-ai"
+          for page in "privacidade" "excluir-conta" "excluir-dados"; do
+            url="${base}/${page}/"
+            target="${RUNNER_TEMP}/${page}.html"
+            meta="$(curl --fail-with-body --silent --show-error --location --retry 2 \
+              --retry-delay 2 --connect-timeout 8 --max-time 30 \
+              --proto '=https' --proto-redir '=https' \
+              --output "${target}" \
+              --write-out '%{http_code}|%{url_effective}|%{content_type}' "${url}")"
+            IFS='|' read -r status actual ctype <<< "${meta}"
+            test "${status}" = "200"
+            [[ "${actual}" == https://* ]]
+            [[ "${ctype}" == *html* ]]
+            grep -Fqi "ConsertaAí" "${target}"
+            grep -Fqi "suporte@consertaai.app.br" "${target}"
+            if [ "${page}" = "excluir-conta" ]; then
+              grep -Fqi "Solicitar exclusão de conta" "${target}"
+              grep -Fqi "Dados que podem ser mantidos" "${target}"
+            elif [ "${page}" = "excluir-dados" ]; then
+              grep -Fqi "sem excluir sua conta" "${target}"
+            else
+              grep -Fqi "Política de Privacidade" "${target}"
+            fi
+            echo "PASS ${page}: ${status}, HTTPS, HTML, verified content"
+          done

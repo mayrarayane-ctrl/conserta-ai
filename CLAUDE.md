@@ -30,3 +30,15 @@ Take the first option that fully works:
 Never cut: validation at trust boundaries, error handling that prevents data loss, security, accessibility, the calibration real hardware needs, anything the user asked for.
 
 (Yes, this file also applies to agents working on the ponytail repo itself. Especially to them.)
+
+## Memória do projeto (ConsertaAí)
+
+Atualize esta seção quando algo abaixo mudar.
+
+- **O que é:** app de diagnóstico de reparos domésticos no Brasil. O usuário manda texto, foto ou áudio; `POST /api/diagnose` em `server.ts` devolve JSON com problema, nível de perigo, ferramentas, passo a passo, quando chamar profissional e preço justo.
+- **Stack:** React 19 + Vite + Tailwind 4 no front, Express em `server.ts` no back. Hospedado pelo Google AI Studio / Cloud Run.
+- **IA:** Gemini (`GEMINI_API_KEY`). Se falhar, tenta Groq (`GROQ_API_KEY`) e depois OpenRouter (`OPENROUTER_API_KEY`); áudio não vai para as reservas. Chaves ficam no painel Secrets do AI Studio, nunca no código.
+- **Stripe:** `/api/webhook-stripe` só registra o evento; ainda não valida assinatura nem marca usuário VIP (plano de R$ 9,90).
+- **Comandos:** `npm install --legacy-peer-deps` (sem a flag dá conflito de peer deps), `npm run dev`, `npm run lint` (tsc). Não há testes automatizados.
+- **Fluxo de trabalho:** a dona do projeto faz merge pelo GitHub. Toda mudança vai numa branch nova a partir da `main` com PR; não commitar `package-lock.json`.
+- **Skills em `.claude/skills/`:** ponytail (+ review, audit, debt, gain, help), frontend-design, impeccable, ui-ux-pro-max, webapp-testing (Playwright).

@@ -27,6 +27,24 @@ const ai = new GoogleGenAI({
   },
 });
 
+// Reserva gratuita quando o Gemini falha (ex.: limite do plano gratuito atingido).
+// shortcut: áudio não é enviado ao OpenRouter, só texto e foto; adicionar se a reserva for muito usada.
+async function diagnoseWithOpenRouter(systemInstruction: string, description?: string, image?: string): Promise<string> {
+  const content: any[] = [{ type: "text", text: description ? `Descrição do problema pelo morador: "${description}"` : "Analise esta foto do problema residencial no Brasil e forneça o diagnóstico completo." }];
+  if (image) content.push({ type: "image_url", image_url: { url: image } });
+  const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: process.env.OPENROUTER_MODEL || "openrouter/free",
+      messages: [{ role: "system", content: systemInstruction }, { role: "user", content }],
+    }),
+  });
+  if (!r.ok) throw new Error(`OpenRouter ${r.status}: ${await r.text()}`);
+  const data = await r.json();
+  return data.choices?.[0]?.message?.content || "{}";
+}
+
 // API endpoint for ConsertaAí diagnosis
 app.post("/api/diagnose", async (req, res) => {
   try {
@@ -85,6 +103,8 @@ Responda estritamente no formato JSON, sem formatação markdown ao redor.`;
             : "Analise esta foto do problema residencial no Brasil e forneça o diagnóstico completo."),
     });
 
+    let rawText: string;
+    try {
     const response = await ai.models.generateContent({
       model: "gemini-3.8-flash",
       contents: { parts: contents },
@@ -119,7 +139,12 @@ Responda estritamente no formato JSON, sem formatação markdown ao redor.`;
       },
     });
 
-    let rawText = response.text || "{}";
+    rawText = response.text || "{}";
+    } catch (geminiError) {
+      if (!process.env.OPENROUTER_API_KEY) throw geminiError;
+      console.error("Gemini falhou, usando OpenRouter:", geminiError);
+      rawText = await diagnoseWithOpenRouter(systemInstruction, description, image);
+    }
     // Clean markdown if present
     rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
 
